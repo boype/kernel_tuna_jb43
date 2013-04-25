@@ -132,9 +132,6 @@ loglevel 3
 # Set min screen-on frequency on boot
     write /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq 384000
 
-# Disable Content Adaptive Brightness (ACL)
-    write /sys/class/backlight/s6e8aa0/acl_set 0
-
 on fs
 # mount mtd partitions
     # Mount /system rw first to give the filesystem a chance to save a checkpoint
@@ -538,4 +535,10 @@ on property:dev.bootcomplete=1
 
 # Enable multi-core scheduling power savings
     write /sys/devices/system/cpu/sched_mc_power_savings 2
+
+# Lowmemorykiller tweaks
+    write /sys/module/lowmemorykiller/parameters/adj 0,1,2,4,8,15
+
+# Disable Content Adaptive Brightness (ACL)
+    write /sys/class/backlight/s6e8aa0/acl_set 0
 
