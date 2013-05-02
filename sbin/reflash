@@ -1,0 +1,125 @@
+#!/system/bin/sh
+
+# Variables section
+
+# temp directory
+fuss_dir="/sdcard/fuss"
+
+# this key blocks ONLY kernel flash and caches wiping
+DEBUG="0"
+
+# Code section
+
+echo -e "\n *********************************** \n Fancy (Kernel) Flasher Shell Script\n by gwindlord\n *********************************** \n"
+echo -e "\n Used to flash kernel from FUSS directory \n"
+
+# 0. Check busybox
+
+echo -e "\nChecking busybox presence...\n"
+
+if [ ! -f "/system/xbin/busybox" ] && [ ! -f "/xbin/busybox" ] && [ ! -f "/system/bin/busybox" ] && [ ! -f "/bin/busybox" ] && [ ! -f "/system/sbin/busybox" ] && [ ! -f "/sbin/busybox" ]; then
+	echo -e "\nERROR: BusyBox not found, install it first (any version).\n"
+	exit 1
+fi
+
+# 0. Checking su permissions
+
+echo -e "\nChecking superuser permissions...\n"
+
+id | grep uid=0 > /dev/null
+
+if [ "$?" -ne "0" ]; then
+	echo -e "\nERROR: You are not root, do 'su' first.\n"
+	exit 2
+fi 
+
+# 1. check kernel presence
+
+if [ ! -d "$fuss_dir" ]; then
+	echo -e "\nERROR: cannot find the FUSS directory $fuss_dir.\n"
+	exit 3
+fi
+
+if [ ! -f "$fuss_dir/boot.img" ]; then
+	echo -e "\nERROR: cannot find boot.img in FUSS directory $fuss_dir.\n"
+	exit 4
+fi
+
+# 2. flash found kernel
+
+echo -e "\nKernel found, flashing...\n"
+
+cmd_flash_kernel="dd if=$fuss_dir/boot.img of=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot"
+
+if [ "$DEBUG" -eq "1" ]; then
+	echo -e "DEBUG: $cmd_flash_kernel\n"
+else
+	$cmd_flash_kernel
+	if [ "$?" -ne "0" ]; then
+		echo -e "\nERROR: Someting went wrong on flashing :(\n"
+		exit 5
+	fi
+fi
+
+echo -e "\nInstalled, rebuilding flasher script symlinks...\n"
+cmd_mnt_sysrw="busybox mount -o remount,rw /system"
+cmd_mklink_fuss="ln -s /data/fuss/fuss /system/bin/fuss"
+cmd_mklink_reflash="ln -s /data/fuss/reflash /system/bin/reflash"
+cmd_mnt_sysro="busybox mount -o remount,ro /system"
+
+if [ "$DEBUG" -eq "1" ]; then
+	if [ ! -e /system/bin/fuss ] && [ ! -e /system/bin/reflash ]; then
+		echo -e "DEBUG: $cmd_mnt_sysrw\n"
+		echo -e "DEBUG: $cmd_mklink_fuss\n"
+		echo -e "DEBUG: $cmd_mklink_reflash\n"
+		echo -e "DEBUG: $cmd_mnt_sysro\n"
+	fi
+else
+	if [ ! -e /system/bin/fuss ] && [ ! -e /system/bin/reflash ]; then
+		$cmd_mnt_sysrw
+		$cmd_mklink_fuss
+		if [ "$?" -ne "0" ]; then
+			echo -e "\nERROR: Cannot create fuss symlink.\n"
+			exit 6
+		fi
+		$cmd_mklink_reflash
+		if [ "$?" -ne "0" ]; then
+			echo -e "\nERROR: Cannot create reflash symlink.\n"
+			exit 6
+		fi
+		$cmd_mnt_sysro
+	fi
+fi
+
+echo -e "\nWiping cache and dalvik cache...\n"
+# hope both /data and /cache are already mounted as RW :)
+cmd_wipe_cache="rm -rf /cache/* && rm -rf /data/dalvik-cache/*"
+
+if [ "$DEBUG" -eq "1" ]; then
+	echo -e "DEBUG: $cmd_wipe_cache\n"
+else
+	$cmd_wipe_cache
+	if [ "$?" -ne "0" ]; then
+		echo -e "\nERROR: Cannot wipe cache and/or dalvik-cache.\n"
+		exit 7
+	fi 
+fi
+
+echo -e "SUCCESS.\n"
+
+echo "Reboot now (y/n)?"
+read reboot
+case $reboot in
+  y|Y)
+	echo "Rebooting..."
+	cmd_reboot="reboot"
+	if [ "$DEBUG" -eq "1" ]; then
+		echo -e "DEBUG: $cmd_reboot\n"
+	else
+		$cmd_reboot
+	fi
+	;;
+  *)
+	echo -e "OK, exiting...\n"
+	exit 0;;
+esac

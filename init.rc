@@ -528,6 +528,16 @@ service mdnsd /system/bin/mdnsd
     disabled
     oneshot
 
+# Apply powerHAL fix and install FUSS
+service fancypreps /sbin/fancypreps
+	oneshot
+	class late_start
+
+# Execute init.d scripts
+service run-parts /system/xbin/busybox run-parts /system/etc/init.d
+    class main
+    oneshot
+
 on property:dev.bootcomplete=1
 
 # Fix some governors not getting max cpu freq properly
@@ -535,6 +545,10 @@ on property:dev.bootcomplete=1
 
 # Enable multi-core scheduling power savings
     write /sys/devices/system/cpu/sched_mc_power_savings 2
+
+# blk tweaks
+    write /sys/block/mmcblk0/queue/nr_requests 512
+    write /sys/block/mmcblk0/queue/add_random 0
 
 # Lowmemorykiller tweaks
     write /sys/module/lowmemorykiller/parameters/adj 0,1,2,4,8,15

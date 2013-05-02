@@ -1,0 +1,200 @@
+#!/system/bin/sh
+
+# Variables section
+
+# update server for boot.img and update.txt
+update_server="http://boypetersen.de"
+# path for update.txt at server
+update_path="fancykernel"
+# temp directory
+fuss_dir="/sdcard/fuss"
+update_file_net="$update_server/$update_path/update.txt"
+update_file_local="$fuss_dir/update.txt"
+
+# this key blocks ONLY kernel flash and caches wiping
+DEBUG="0"
+
+# Code section
+
+echo -e "\n *********************************** \n Fancy (Kernel) Updater Shell Script\n by gwindlord\n *********************************** \n"
+
+# 0. Check busybox
+
+echo -e "\nChecking busybox presence...\n"
+
+if [ ! -f "/system/xbin/busybox" ] && [ ! -f "/xbin/busybox" ] && [ ! -f "/system/bin/busybox" ] && [ ! -f "/bin/busybox" ] && [ ! -f "/system/sbin/busybox" ] && [ ! -f "/sbin/busybox" ]; then
+	echo -e "\nERROR: BusyBox not found, install it first (any version).\n"
+	exit 1
+fi
+
+# 0. Checking su permissions
+
+echo -e "\nChecking superuser permissions...\n"
+
+id | grep uid=0 > /dev/null
+
+if [ "$?" -ne "0" ]; then
+	echo -e "\nERROR: You are not root, do 'su' first.\n"
+	exit 2
+fi 
+
+# 1. Check current kernel version
+
+kernel_version=`uname -r`
+release=`echo $kernel_version | busybox awk -F'-' '{print $4}'`
+#branch=`echo $kernel_version | busybox cut -f 5 -d - `
+
+# 2. check new kernel version
+
+if [ -d "$fuss_dir" ]; then
+	rm -rf $fuss_dir
+fi
+
+mkdir $fuss_dir 2> /dev/null
+
+
+if [ "$?" -ne "0" ]; then
+	echo -e "\nERROR: Cannot create FUSS directory $fuss_dir.\n"
+	exit 3
+fi
+
+
+# download the update.txt file
+cmd_get_update="busybox wget -q $update_file_net -P $fuss_dir"
+
+#if [ "$DEBUG" -eq "1" ]; then
+#	echo -e "DEBUG: $cmd_get_update\n"
+#else
+	$cmd_get_update
+#fi
+
+if [ "$?" -ne "0" ]; then
+	echo -e "\nERROR: Cannot download the kernel changes from server for some reason.\n"
+	exit 4
+fi
+
+# choose version
+
+echo "Do you want standard (1) or extended (2) version?"
+read branch
+echo ""
+case $branch in
+	1)branch="std";;
+	2)branch="ext";;
+	*)
+		echo "WARNING: Please choose standard (1) or extended (2) version"
+		read branch
+		echo ""
+		case $branch in
+			1)branch="std";;
+			2)branch="ext";;
+			*)
+				echo "\nERROR: Wrong version choice."
+				exit 5;;
+		esac
+esac
+
+new_kernel_version=`cat $update_file_local | grep "$branch" | busybox awk -F' ' '{print $1}'`
+new_kernel_md5=`cat $update_file_local | grep "$branch" | busybox awk -F' ' '{print $2}'`
+
+# check if the current one is not the same as the downloaded one :)
+
+echo $new_kernel_version | grep "$release" > /dev/null
+
+if [ "$?" -ne "0" ]; then
+	new_release=`echo $new_kernel_version | busybox awk -F'/' '{print $2}'`
+	echo "The new kernel version for your type is $new_release. Download and install it and reboot (y/n)?"
+	read continue
+	echo ""
+	case $continue in
+	  y|Y)
+			echo -e "Downloading the new kernel...\n"
+			cmd_get_kernel="busybox wget $update_server/$update_path/$new_kernel_version/boot.img -P $fuss_dir"
+
+#			if [ "$DEBUG" -eq "1" ]; then
+#				echo -e "DEBUG: $cmd_get_kernel\n"
+#			else
+				$cmd_get_kernel
+#			fi
+			
+			down_kernel_md5=`busybox md5sum $fuss_dir/boot.img | busybox awk -F' ' '{print $1}'`
+			if [ "$new_kernel_md5" == "$down_kernel_md5" ]; then
+				echo -e "\nDownloaded successfully, checksum verified. Flashing...\n"
+				cmd_flash_kernel="dd if=$fuss_dir/boot.img of=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot"
+				
+				if [ "$DEBUG" -eq "1" ]; then
+					echo -e "DEBUG: $cmd_flash_kernel\n"
+				else
+					$cmd_flash_kernel
+					if [ "$?" -ne "0" ]; then
+						echo -e "\nERROR: Someting went wrong on flashing :(\n"
+						exit 6
+					fi
+				fi
+
+				echo -e "\nInstalled, rebuilding flasher script symlinks...\n"
+				cmd_mnt_sysrw="busybox mount -o remount,rw /system"
+				cmd_mklink_fuss="ln -s /data/fuss/fuss /system/bin/fuss"
+				cmd_mklink_reflash="ln -s /data/fuss/reflash /system/bin/reflash"
+				cmd_mnt_sysro="busybox mount -o remount,ro /system"
+
+				if [ "$DEBUG" -eq "1" ]; then
+					if [ ! -e /system/bin/fuss ] && [ ! -e /system/bin/reflash ]; then
+						echo -e "DEBUG: $cmd_mnt_sysrw\n"
+						echo -e "DEBUG: $cmd_mklink_fuss\n"
+						echo -e "DEBUG: $cmd_mklink_reflash\n"
+						echo -e "DEBUG: $cmd_mnt_sysro\n"
+					fi
+				else
+					if [ ! -e /system/bin/fuss ] && [ ! -e /system/bin/reflash ]; then
+						$cmd_mnt_sysrw
+						$cmd_mklink_fuss
+						if [ "$?" -ne "0" ]; then
+							echo -e "\nERROR: Cannot create fuss symlink.\n"
+							exit 7
+						fi
+						$cmd_mklink_reflash
+						if [ "$?" -ne "0" ]; then
+							echo -e "\nERROR: Cannot create reflash symlink.\n"
+							exit 7
+						fi
+						$cmd_mnt_sysro
+					fi
+				fi
+				
+				echo -e "\nWiping cache and dalvik cache...\n"
+				# hope both /data and /cache are already mounted as RW :)
+				cmd_wipe_cache="rm -rf /cache/* && rm -rf /data/dalvik-cache/*"
+				
+				if [ "$DEBUG" -eq "1" ]; then
+					echo -e "DEBUG: $cmd_wipe_cache\n"
+				else
+					$cmd_wipe_cache
+					if [ "$?" -ne "0" ]; then
+						echo -e "\nERROR: Cannot wipe cache and/or dalvik-cache.\n"
+						exit 8
+					fi 
+				fi
+				
+				echo -e "SUCCESS.\n"
+				
+				echo "Rebooting..."
+				cmd_reboot="reboot"
+				if [ "$DEBUG" -eq "1" ]; then
+					echo -e "DEBUG: $cmd_reboot\n"
+				else
+					$cmd_reboot
+				fi
+			else
+				echo -e "\nERROR: MD5 mismatch, please try again.\n"
+				exit 9
+			fi
+	  ;;
+	  *)
+		echo -e "OK, exiting...\n"
+		exit 0;;
+	esac
+else
+	echo -e "You already have the latest kernel version.\n"
+	exit 0
+fi
