@@ -4,9 +4,9 @@ busybox=/sbin/busybox;
 zipalign=/sbin/zipalign;
 
 # cpu, sched and cache tweaks
-  $busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-  $busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
   $busybox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
+  $busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
+  $busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
   $busybox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
   $busybox echo 975000 > /proc/sys/kernel/sched_rt_runtime_us
   $busybox echo 975000 > /dev/cpuctl/cpu.rt_runtime_us
@@ -21,12 +21,6 @@ zipalign=/sbin/zipalign;
 # gpu tweaks
   $busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
   $busybox echo 1 > /sys/kernel/pvr_simple_gov/simple_governor
-
-# display/color settings
-  $busybox echo 0 > /sys/class/backlight/s6e8aa0/acl_set
-  $busybox echo "-4 0 5" > /sys/class/misc/colorcontrol/v1_offset
-  $busybox echo "1770000000 1810000000 2000000000" > /sys/class/misc/colorcontrol/multiplier
-  $busybox echo -6 > /sys/module/panel_s6e8aa0/parameters/contrast
 
 # block tweaks
 for i in /sys/block/*/queue; do
