@@ -1,0 +1,119 @@
+#!/system/bin/sh
+
+busybox=/sbin/busybox;
+zipalign=/sbin/zipalign;
+
+# cpu, sched and cache tweaks
+  $busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+  $busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
+  $busybox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
+  $busybox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
+  $busybox echo 975000 > /proc/sys/kernel/sched_rt_runtime_us
+  $busybox echo 975000 > /dev/cpuctl/cpu.rt_runtime_us
+  $busybox echo 1 > /proc/cpu/alignment
+  $busybox echo 15000000 > /proc/sys/kernel/sched_latency_ns
+  $busybox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
+  $busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
+  $busybox echo 10 > /proc/sys/vm/vfs_cache_pressure
+  $busybox echo 18 > /proc/sys/vm/dirty_background_ratio
+  $busybox echo 21 > /proc/sys/vm/dirty_ratio
+
+# gpu tweaks
+  $busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
+  $busybox echo 1 > /sys/kernel/pvr_simple_gov/simple_governor
+
+# display/color settings
+  $busybox echo 0 > /sys/class/backlight/s6e8aa0/acl_set
+  $busybox echo "-4 0 5" > /sys/class/misc/colorcontrol/v1_offset
+  $busybox echo "1770000000 1810000000 2000000000" > /sys/class/misc/colorcontrol/multiplier
+  $busybox echo -6 > /sys/module/panel_s6e8aa0/parameters/contrast
+
+# block tweaks
+for i in /sys/block/*/queue; do
+  $busybox echo 0 > $i/add_random;
+  $busybox echo 1 > $i/nomerges;
+  $busybox echo 512 > $i/nr_requests;
+  $busybox echo 256 > $i/read_ahead_kb;
+  $busybox echo 2 > $i/rq_affinity;
+done;
+
+# powerHAL fix
+if [ ! -e /system/lib/hw/power.tuna.so.bak ]; then
+  $busybox mount -o remount,rw /system;
+  $busybox cp /system/lib/hw/power.tuna.so /system/lib/hw/power.tuna.so.bak;
+  $busybox cp /sbin/power.tuna.so /system/lib/hw/;
+  $busybox chmod 644 /system/lib/hw/power.tuna.so;
+  $busybox mount -o remount,ro /system;
+fi;
+
+# FUSS
+if [ ! -e /data/fuss ]; then
+  $busybox mkdir /data/fuss;
+  $busybox chown -R root.root /data/fuss;
+  $busybox chmod -R 755 /data/fuss;
+  $busybox cp /sbin/fuss /data/fuss/;
+  $busybox cp /sbin/reflash /data/fuss/;
+  $busybox chmod 755 /data/fuss/fuss;
+  $busybox chmod 755 /data/fuss/reflash;
+fi;
+
+if [ ! -e /system/bin/fuss ]; then
+  $busybox mount -o remount,rw /system;
+  $busybox ln -s /data/fuss/fuss /system/bin/fuss;
+  $busybox ln -s /data/fuss/reflash /system/bin/reflash;
+  $busybox mount -o remount,ro /system;
+fi;
+
+# init.d support
+if [ ! -e /system/etc/init.d ]; then
+  $busybox mount -o remount,rw /system;
+  $busybox mkdir /system/etc/init.d;
+  $busybox chown -R root.root /system/etc/init.d;
+  $busybox chmod -R 755 /system/etc/init.d;
+  $busybox mount -o remount,ro /system;
+fi;
+
+if [ ! -e /system/bin/sysinit ]; then
+  $busybox run-parts /system/etc/init.d
+fi;
+
+# zipalign apks
+LOG_FILE=/data/zipalign.log
+ZIPALIGNDB=/data/zipalign.db
+
+if [ -e $LOG_FILE ]; then
+  $busybox rm $LOG_FILE;
+fi;
+
+if [ ! -f $ZIPALIGNDB ]; then
+  $busybox touch $ZIPALIGNDB;
+fi;
+
+$busybox echo "Starting FV Automatic ZipAlign $( date +"%m-%d-%Y %H:%M:%S" )" | $busybox tee -a $LOG_FILE
+
+for DIR in /system/app /data/app ; do
+  cd $DIR
+  for APK in *.apk ; do
+    if [ $APK -ot $ZIPALIGNDB ] && [ $($busybox grep "$DIR/$APK" $ZIPALIGNDB|$busybox wc -l) -gt 0 ] ; then
+      $busybox echo "Already checked: $DIR/$APK" | $busybox tee -a $LOG_FILE
+    else
+      $zipalign -c 4 $APK
+      if [ $? -eq 0 ] ; then
+        $busybox echo "Already aligned: $DIR/$APK" | $busybox tee -a $LOG_FILE
+        $busybox grep "$DIR/$APK" $ZIPALIGNDB > /dev/null || $busybox echo $DIR/$APK >> $ZIPALIGNDB
+      else
+        $busybox echo "Now aligning: $DIR/$APK" | $busybox tee -a $LOG_FILE
+        $zipalign -f 4 $APK /cache/$APK
+        $busybox mount -o rw,remount /system
+        $busybox cp -f -p /cache/$APK $APK
+	$busybox chmod 644 $APK
+        $busybox rm -f /cache/$APK
+        $busybox grep "$DIR/$APK" $ZIPALIGNDB > /dev/null || $busybox echo $DIR/$APK >> $ZIPALIGNDB
+      fi
+    fi
+  done
+done
+
+$busybox mount -o ro,remount /system
+$busybox touch $ZIPALIGNDB
+$busybox echo "Automatic ZipAlign finished at $( date +"%m-%d-%Y %H:%M:%S" )" | $busybox tee -a $LOG_FILE

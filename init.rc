@@ -7,6 +7,7 @@
 import /init.usb.rc
 import /init.${ro.hardware}.rc
 import /init.trace.rc
+import /init.carrier.rc
 
 on early-init
     # Set init and its forked children's oom_adj.
@@ -23,7 +24,7 @@ on early-init
     mkdir /storage 0050 root sdcard_r
     # Create mountpoint so Dalvik can mark as slave in zygotes.
     mount tmpfs tmpfs /storage mode=0050,uid=0,gid=1028
-	
+
 on init
 
 sysclktz 0
@@ -62,7 +63,7 @@ loglevel 3
 
     # See storage config details at http://source.android.com/tech/storage/
     mkdir /mnt/shell 0700 shell shell
-	# Ensure permissions are set appropriately after device early-init.
+    # Ensure permissions are set appropriately after device early-init.
     mkdir /storage 0050 root sdcard_r
 
     # Directory for putting things only root should see.
@@ -85,9 +86,15 @@ loglevel 3
     mkdir /mnt/obb 0700 root system
     mount tmpfs tmpfs /mnt/obb mode=0755,gid=1000
 
+    # Fuse public mount points.
+    mkdir /mnt/fuse 0700 root system
+    mount tmpfs tmpfs /mnt/fuse mode=0775,gid=1000
+
     write /proc/sys/kernel/panic_on_oops 1
     write /proc/sys/kernel/hung_task_timeout_secs 0
     write /proc/cpu/alignment 4
+    write /proc/sys/kernel/sched_latency_ns 10000000
+    write /proc/sys/kernel/sched_wakeup_granularity_ns 2000000
     write /proc/sys/kernel/sched_compat_yield 1
     write /proc/sys/kernel/sched_child_runs_first 0
     write /proc/sys/kernel/randomize_va_space 2
@@ -125,12 +132,6 @@ loglevel 3
 # Allow everybody to read the xt_qtaguid resource tracking misc dev.
 # This is needed by any process that uses socket tagging.
     chmod 0644 /dev/xt_qtaguid
-
-# Set max screen-off frequency on boot
-    write /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq 537600
-
-# Set min screen-on frequency on boot
-    write /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq 384000
 
 on fs
 # mount mtd partitions
@@ -255,7 +256,6 @@ on post-fs-data
     import /init.cm.rc
 
 on boot
-
 # basic network init
     ifup lo
     hostname localhost
@@ -273,6 +273,10 @@ on boot
     chmod 0664 /sys/module/lowmemorykiller/parameters/adj
     chown root system /sys/module/lowmemorykiller/parameters/minfree
     chmod 0664 /sys/module/lowmemorykiller/parameters/minfree
+
+    # Tweak background writeout
+    write /proc/sys/vm/dirty_expire_centisecs 200
+    write /proc/sys/vm/dirty_background_ratio  5
 
     # Permissions for System Server and daemons.
     chown radio system /sys/android_power/state
@@ -528,31 +532,7 @@ service mdnsd /system/bin/mdnsd
     disabled
     oneshot
 
-# Apply powerHAL fix and install FUSS
-service fancypreps /sbin/fancypreps
-	oneshot
-	class late_start
-
-# Execute init.d scripts
-service run-parts /system/xbin/busybox run-parts /system/etc/init.d
+# Execute fancyinit startup script
+service fancyinit /sbin/fancyinit
     class main
     oneshot
-
-on property:dev.bootcomplete=1
-
-# Fix some governors not getting max cpu freq properly
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 1228800
-
-# Enable multi-core scheduling power savings
-    write /sys/devices/system/cpu/sched_mc_power_savings 2
-
-# blk tweaks
-    write /sys/block/mmcblk0/queue/nr_requests 512
-    write /sys/block/mmcblk0/queue/add_random 0
-
-# Lowmemorykiller tweaks
-    write /sys/module/lowmemorykiller/parameters/adj 0,1,2,4,8,15
-
-# Disable Content Adaptive Brightness (ACL)
-    write /sys/class/backlight/s6e8aa0/acl_set 0
-
