@@ -1,35 +1,8 @@
 #!/system/bin/sh
 
 busybox=/sbin/busybox;
+fstrim=/sbin/fstrim;
 zipalign=/sbin/zipalign;
-
-# cpu, sched and cache tweaks
-  $busybox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
-  $busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
-  $busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-  $busybox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
-  $busybox echo 975000 > /proc/sys/kernel/sched_rt_runtime_us
-  $busybox echo 975000 > /dev/cpuctl/cpu.rt_runtime_us
-  $busybox echo 1 > /proc/cpu/alignment
-  $busybox echo 15000000 > /proc/sys/kernel/sched_latency_ns
-  $busybox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
-  $busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
-  $busybox echo 10 > /proc/sys/vm/vfs_cache_pressure
-  $busybox echo 18 > /proc/sys/vm/dirty_background_ratio
-  $busybox echo 21 > /proc/sys/vm/dirty_ratio
-
-# gpu tweaks
-  $busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
-  $busybox echo 1 > /sys/kernel/pvr_simple_gov/simple_governor
-
-# block tweaks
-for i in /sys/block/*/queue; do
-  $busybox echo 0 > $i/add_random;
-  $busybox echo 1 > $i/nomerges;
-  $busybox echo 512 > $i/nr_requests;
-  $busybox echo 256 > $i/read_ahead_kb;
-  $busybox echo 2 > $i/rq_affinity;
-done;
 
 # powerHAL fix
 if [ ! -e /system/lib/hw/power.tuna.so.bak ]; then
@@ -111,3 +84,27 @@ done
 $busybox mount -o ro,remount /system
 $busybox touch $ZIPALIGNDB
 $busybox echo "Automatic ZipAlign finished at $( date +"%m-%d-%Y %H:%M:%S" )" | $busybox tee -a $LOG_FILE
+
+# trim file system if wipes have been performed
+if [[ ! -e /cache/trimmed ]] || [[ ! -e /data/dalvik-cache/trimmed ]]; then
+  $fstrim /cache
+  $fstrim /data
+  $busybox touch /cache/trimmed
+  $busybox touch /data/dalvik-cache/trimmed
+fi;
+
+# increase systemui process priority
+sleep 20
+
+loopcount=1
+
+while [ $loopcount -le 18 ]
+do
+  if [ $($busybox pgrep com.android.systemui) ] ; then
+    $busybox renice -20 $($busybox pgrep com.android.systemui)
+    exit
+  else
+    (( loopcount++ ))
+    $busybox sleep 10
+  fi
+done
