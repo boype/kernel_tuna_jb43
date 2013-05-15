@@ -6,16 +6,15 @@ busybox=/sbin/busybox;
   $busybox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
   $busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
   $busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-  $busybox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
-  $busybox echo 975000 > /proc/sys/kernel/sched_rt_runtime_us
-  $busybox echo 975000 > /dev/cpuctl/cpu.rt_runtime_us
+  $busybox echo 1 > /sys/devices/system/cpu/sched_mc_power_savings
+  $busybox echo 965000 > /proc/sys/kernel/sched_rt_runtime_us
+  $busybox echo 965000 > /dev/cpuctl/cpu.rt_runtime_us
   $busybox echo 1 > /proc/cpu/alignment
-  $busybox echo 15000000 > /proc/sys/kernel/sched_latency_ns
-  $busybox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
-  $busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
+  $busybox echo 12000000 > /proc/sys/kernel/sched_latency_ns
+  $busybox echo 4000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
   $busybox echo 10 > /proc/sys/vm/vfs_cache_pressure
-  $busybox echo 18 > /proc/sys/vm/dirty_background_ratio
-  $busybox echo 21 > /proc/sys/vm/dirty_ratio
+  $busybox echo 92274688 > /proc/sys/vm/dirty_background_bytes
+  $busybox echo 104857600 > /proc/sys/vm/dirty_bytes
 
 # gpu tweaks
   $busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
@@ -25,7 +24,7 @@ busybox=/sbin/busybox;
 for i in /sys/block/*/queue; do
   $busybox echo 0 > $i/add_random;
   $busybox echo 1 > $i/nomerges;
-  $busybox echo 512 > $i/nr_requests;
-  $busybox echo 256 > $i/read_ahead_kb;
+  $busybox echo 160 > $i/nr_requests;
+  $busybox echo 384 > $i/read_ahead_kb;
   $busybox echo 2 > $i/rq_affinity;
 done;

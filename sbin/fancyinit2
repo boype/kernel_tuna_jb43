@@ -94,17 +94,32 @@ if [[ ! -e /cache/trimmed ]] || [[ ! -e /data/dalvik-cache/trimmed ]]; then
 fi;
 
 # increase systemui process priority
-sleep 20
+$ busybox sleep 20
 
 loopcount=1
 
 while [ $loopcount -le 18 ]
 do
   if [ $($busybox pgrep com.android.systemui) ] ; then
-    $busybox renice -20 $($busybox pgrep com.android.systemui)
-    exit
+    $busybox renice -17 $($busybox pgrep com.android.systemui)
+    break
   else
     (( loopcount++ ))
     $busybox sleep 10
+  fi
+done
+
+# low memory killer whitelist for common launchers
+list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam"
+
+$busybox sleep 30
+
+for class in $list
+do
+  if [ $($busybox pgrep $class) ] ; then
+    pid=$($busybox pgrep $class)
+    $busybox echo -17 > /proc/$pid/oom_adj
+    $busybox chmod 100 /proc/$pid/oom_adj
+    break
   fi
 done
