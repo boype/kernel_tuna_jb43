@@ -1,60 +1,60 @@
 #!/system/bin/sh
 
-busybox=/sbin/busybox;
-fstrim=/sbin/fstrim;
-zipalign=/sbin/zipalign;
+busybox=/sbin/busybox
+fstrim=/sbin/fstrim
+zipalign=/sbin/zipalign
 
 # powerHAL fix
 if [ ! -e /system/lib/hw/power.tuna.so.bak ]; then
-  $busybox mount -o remount,rw /system;
-  $busybox cp /system/lib/hw/power.tuna.so /system/lib/hw/power.tuna.so.bak;
-  $busybox cp /sbin/power.tuna.so /system/lib/hw/;
-  $busybox chmod 644 /system/lib/hw/power.tuna.so;
-  $busybox mount -o remount,ro /system;
-fi;
+  $busybox mount -o remount,rw /system
+  $busybox cp /system/lib/hw/power.tuna.so /system/lib/hw/power.tuna.so.bak
+  $busybox cp /sbin/power.tuna.so /system/lib/hw/
+  $busybox chmod 644 /system/lib/hw/power.tuna.so
+  $busybox mount -o remount,ro /system
+fi
 
 # FUSS
 if [ ! -e /data/fuss ]; then
-  $busybox mkdir /data/fuss;
-  $busybox chown -R root.root /data/fuss;
-  $busybox chmod -R 755 /data/fuss;
-  $busybox cp /sbin/fuss /data/fuss/;
-  $busybox cp /sbin/reflash /data/fuss/;
-  $busybox chmod 755 /data/fuss/fuss;
-  $busybox chmod 755 /data/fuss/reflash;
-fi;
+  $busybox mkdir /data/fuss
+  $busybox chown -R root.root /data/fuss
+  $busybox chmod -R 755 /data/fuss
+  $busybox cp /sbin/fuss /data/fuss/
+  $busybox cp /sbin/reflash /data/fuss/
+  $busybox chmod 755 /data/fuss/fuss
+  $busybox chmod 755 /data/fuss/reflash
+fi
 
 if [ ! -e /system/bin/fuss ]; then
-  $busybox mount -o remount,rw /system;
-  $busybox ln -s /data/fuss/fuss /system/bin/fuss;
-  $busybox ln -s /data/fuss/reflash /system/bin/reflash;
-  $busybox mount -o remount,ro /system;
-fi;
+  $busybox mount -o remount,rw /system
+  $busybox ln -s /data/fuss/fuss /system/bin/fuss
+  $busybox ln -s /data/fuss/reflash /system/bin/reflash
+  $busybox mount -o remount,ro /system
+fi
 
 # init.d support
 if [ ! -e /system/etc/init.d ]; then
-  $busybox mount -o remount,rw /system;
-  $busybox mkdir /system/etc/init.d;
-  $busybox chown -R root.root /system/etc/init.d;
-  $busybox chmod -R 755 /system/etc/init.d;
-  $busybox mount -o remount,ro /system;
-fi;
+  $busybox mount -o remount,rw /system
+  $busybox mkdir /system/etc/init.d
+  $busybox chown -R root.root /system/etc/init.d
+  $busybox chmod -R 755 /system/etc/init.d
+  $busybox mount -o remount,ro /system
+fi
 
 if [ ! -e /system/bin/sysinit ]; then
   $busybox run-parts /system/etc/init.d
-fi;
+fi
 
 # zipalign apks
 LOG_FILE=/data/zipalign.log
 ZIPALIGNDB=/data/zipalign.db
 
 if [ -e $LOG_FILE ]; then
-  $busybox rm $LOG_FILE;
-fi;
+  $busybox rm $LOG_FILE
+fi
 
 if [ ! -f $ZIPALIGNDB ]; then
-  $busybox touch $ZIPALIGNDB;
-fi;
+  $busybox touch $ZIPALIGNDB
+fi
 
 $busybox echo "Starting FV Automatic ZipAlign $( date +"%m-%d-%Y %H:%M:%S" )" | $busybox tee -a $LOG_FILE
 
@@ -91,17 +91,16 @@ if [[ ! -e /cache/trimmed ]] || [[ ! -e /data/dalvik-cache/trimmed ]]; then
   $fstrim /data
   $busybox touch /cache/trimmed
   $busybox touch /data/dalvik-cache/trimmed
-fi;
+fi
 
 # increase systemui process priority
 $ busybox sleep 20
 
 loopcount=1
 
-while [ $loopcount -le 18 ]
-do
-  if [ $($busybox pgrep com.android.systemui) ] ; then
-    $busybox renice -17 $($busybox pgrep com.android.systemui)
+while [ $loopcount -le 18 ]; do
+  if [ $($busybox pgrep com.android.systemui) ]; then
+    $busybox renice -20 $($busybox pgrep com.android.systemui)
     break
   else
     (( loopcount++ ))
@@ -114,9 +113,8 @@ list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfre
 
 $busybox sleep 30
 
-for class in $list
-do
-  if [ $($busybox pgrep $class) ] ; then
+for class in $list; do
+  if [ $($busybox pgrep $class) ]; then
     pid=$($busybox pgrep $class)
     $busybox echo -17 > /proc/$pid/oom_adj
     $busybox chmod 100 /proc/$pid/oom_adj
