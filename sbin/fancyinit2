@@ -5,16 +5,16 @@ fstrim=/sbin/fstrim
 zipalign=/sbin/zipalign
 
 # powerHAL fix
-if [ ! -e /system/lib/hw/power.tuna.so.bak ]; then
+if [ ! -e /system/lib/hw/power.tuna.so.bak ] ; then
   $busybox mount -o remount,rw /system
-  $busybox cp /system/lib/hw/power.tuna.so /system/lib/hw/power.tuna.so.bak
+  $busybox mv /system/lib/hw/power.tuna.so /system/lib/hw/power.tuna.so.bak
   $busybox cp /sbin/power.tuna.so /system/lib/hw/
   $busybox chmod 644 /system/lib/hw/power.tuna.so
   $busybox mount -o remount,ro /system
 fi
 
 # FUSS
-if [ ! -e /data/fuss ]; then
+if [ ! -e /data/fuss ] ; then
   $busybox mkdir /data/fuss
   $busybox chown -R root.root /data/fuss
   $busybox chmod -R 755 /data/fuss
@@ -24,7 +24,7 @@ if [ ! -e /data/fuss ]; then
   $busybox chmod 755 /data/fuss/reflash
 fi
 
-if [ ! -e /system/bin/fuss ]; then
+if [ ! -e /system/bin/fuss ] ; then
   $busybox mount -o remount,rw /system
   $busybox ln -s /data/fuss/fuss /system/bin/fuss
   $busybox ln -s /data/fuss/reflash /system/bin/reflash
@@ -32,7 +32,7 @@ if [ ! -e /system/bin/fuss ]; then
 fi
 
 # init.d support
-if [ ! -e /system/etc/init.d ]; then
+if [ ! -e /system/etc/init.d ] ; then
   $busybox mount -o remount,rw /system
   $busybox mkdir /system/etc/init.d
   $busybox chown -R root.root /system/etc/init.d
@@ -40,7 +40,7 @@ if [ ! -e /system/etc/init.d ]; then
   $busybox mount -o remount,ro /system
 fi
 
-if [ ! -e /system/bin/sysinit ]; then
+if [ ! -e /system/bin/sysinit ] ; then
   $busybox run-parts /system/etc/init.d
 fi
 
@@ -48,11 +48,11 @@ fi
 LOG_FILE=/data/zipalign.log
 ZIPALIGNDB=/data/zipalign.db
 
-if [ -e $LOG_FILE ]; then
+if [ -e $LOG_FILE ] ; then
   $busybox rm $LOG_FILE
 fi
 
-if [ ! -f $ZIPALIGNDB ]; then
+if [ ! -f $ZIPALIGNDB ] ; then
   $busybox touch $ZIPALIGNDB
 fi
 
@@ -86,7 +86,7 @@ $busybox touch $ZIPALIGNDB
 $busybox echo "Automatic ZipAlign finished at $( date +"%m-%d-%Y %H:%M:%S" )" | $busybox tee -a $LOG_FILE
 
 # trim file system if wipes have been performed
-if [[ ! -e /cache/trimmed ]] || [[ ! -e /data/dalvik-cache/trimmed ]]; then
+if [[ ! -e /cache/trimmed ]] || [[ ! -e /data/dalvik-cache/trimmed ]] ; then
   $fstrim /cache
   $fstrim /data
   $busybox touch /cache/trimmed
@@ -94,19 +94,21 @@ if [[ ! -e /cache/trimmed ]] || [[ ! -e /data/dalvik-cache/trimmed ]]; then
 fi
 
 # increase systemui process priority
-until [ $($busybox pgrep com.android.systemui) ]; do
+until [ $($busybox pgrep com.android.systemui) ] ; do
   $busybox sleep 1
 done
 
-$busybox renice -20 $($busybox pgrep com.android.systemui)
+$busybox renice -17 $($busybox pgrep com.android.systemui)
+
+# wifi module
+$busybox insmod /sbin/bcmdhd.ko firmware_path=/system/vendor/firmware/fw_bcmdhd.bin nvram_path=/system/etc/wifi/bcmdhd.cal
 
 # low memory killer whitelist for common launchers
 list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam"
 
 $busybox sleep 30
 
-for class in $list
-do
+for class in $list ; do
   if [ $($busybox pgrep $class) ] ; then
     pid=$($busybox pgrep $class)
     $busybox echo -17 > /proc/$pid/oom_adj
@@ -114,3 +116,10 @@ do
     break
   fi
 done
+
+# disable swappiness if zram is not active
+swapsize=$($busybox free | $busybox grep -i swap | $busybox awk '{print $2}')
+
+if [ $swapsize -eq 0 ] ; then
+  echo 0 > /proc/sys/vm/swappiness
+fi
