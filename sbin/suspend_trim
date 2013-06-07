@@ -1,0 +1,27 @@
+#!/system/bin/sh
+
+busybox=/sbin/busybox
+fstrim=/sbin/fstrim
+
+TRIMHLPFILE=/data/trimhelper
+RESUMETIME=$($busybox cat $TRIMHLPFILE | $busybox sed -n '1p')
+CURTIME=$($busybox date +%s)
+
+if [ $RESUMETIME -eq 0 ] ; then
+  $busybox sed -i "1s/.*/$CURTIME/" $TRIMHLPFILE
+else
+  NOTRIMTIME=$($busybox cat $TRIMHLPFILE | $busybox sed -n '2p')
+  TIMEDIFF=$(( $CURTIME - $RESUMETIME + $NOTRIMTIME ))
+  if [ $TIMEDIFF -ge 900 ] ; then
+    CURIVAVOLT=$($busybox cat /sys/kernel/debug/voltage/vdd_iva/curr_vp_volt)
+	if [ $CURIVAVOLT -lt 925000 ] ; then
+	  $fstrim /cache
+	  $busybox sed -i '2s/.*/0/' $TRIMHLPFILE
+	else
+	  $busybox sed -i "2s/.*/$TIMEDIFF/" $TRIMHLPFILE
+	fi
+  else
+    $busybox sed -i "2s/.*/$TIMEDIFF/" $TRIMHLPFILE
+  fi
+  $busybox sed -i '1s/.*/0/' $TRIMHLPFILE
+fi

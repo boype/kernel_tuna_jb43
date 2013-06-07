@@ -1,0 +1,17 @@
+#!/system/bin/sh
+
+busybox=/sbin/busybox
+dhdparams=/sys/module/bcmdhd/parameters
+
+dtim_skip_override=$($busybox cat $dhdparams/dtim_skip_override)
+packet_filter_override=$($busybox cat $dhdparams/packet_filter_override)
+wifi_drop_workaround=$($busybox cat $dhdparams/wifi_drop_workaround)
+wifi_pm=$($busybox cat $dhdparams/wifi_pm)
+
+$busybox rmmod bcmdhd -w
+$busybox insmod /sbin/bcmdhd.ko firmware_path=/system/vendor/firmware/fw_bcmdhd.bin nvram_path=/system/etc/wifi/bcmdhd.cal
+
+$busybox echo $dtim_skip_override > $dhdparams/dtim_skip_override
+$busybox echo $packet_filter_override > $dhdparams/packet_filter_override
+$busybox echo $wifi_drop_workaround > $dhdparams/wifi_drop_workaround
+$busybox echo $wifi_pm > $dhdparams/wifi_pm

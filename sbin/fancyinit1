@@ -24,9 +24,11 @@ for i in /sys/block/*/queue; do
   $busybox echo 512 > $i/nr_requests
   $busybox echo 256 > $i/read_ahead_kb
   $busybox echo 0 > $i/rotational
-  $busybox echo 0 > $i/rq_affinity
 done
 
 $busybox echo 0 > /sys/block/mmcblk0/queue/add_random
 $busybox echo 128 > /sys/block/mmcblk0/queue/max_sectors_kb
-$busybox echo 256 > /sys/block/mmcblk0/queue/nr_requests
+$busybox echo 2 > /sys/block/mmcblk0/queue/rq_affinity
+
+# LMK
+$busybox echo 8084,10114,12144,15692,17722,22264 > /sys/module/lowmemorykiller/parameters/minfree
