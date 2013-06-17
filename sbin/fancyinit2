@@ -49,7 +49,10 @@ fi
 KERNEL_VERSION=$($busybox uname -r)
 if [ ! -e /system/lib/modules/$KERNEL_VERSION ] ; then
   $busybox mount -o remount,rw /system
-  $busybox rmdir `$busybox find ./ -name '*fancy*'`
+  if [ ! -e /system/lib/modules ] ; then
+    $busybox mkdir /system/lib/modules
+  fi
+  $busybox rmdir `$busybox find /system/lib/modules -name '*fancy*'`
   $busybox mkdir /system/lib/modules/$KERNEL_VERSION
   $busybox chown -R root.root /system/lib/modules/$KERNEL_VERSION
   $busybox chmod -R 644 /system/lib/modules/$KERNEL_VERSION

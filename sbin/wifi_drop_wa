@@ -7,8 +7,12 @@ dtim_skip_override=$($busybox cat $dhdparams/dtim_skip_override)
 packet_filter_override=$($busybox cat $dhdparams/packet_filter_override)
 wifi_pm=$($busybox cat $dhdparams/wifi_pm)
 
-$busybox rmmod bcmdhd -w
-sleep 1
+$busybox rmmod bcmdhd
+while [ $? -ne 0 ] ; do
+  $busybox sleep 1
+  $busybox rmmod bcmdhd
+done
+$busybox sleep 1
 $busybox insmod /sbin/bcmdhd.ko firmware_path=/system/vendor/firmware/fw_bcmdhd.bin nvram_path=/system/etc/wifi/bcmdhd.cal
 
 $busybox echo $dtim_skip_override > $dhdparams/dtim_skip_override
