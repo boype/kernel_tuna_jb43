@@ -17,7 +17,6 @@ $busybox echo 104857600 > /proc/sys/vm/dirty_bytes
 
 # gpu tweaks
 $busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
-$busybox echo 1 > /sys/kernel/pvr_simple_gov/simple_governor
 
 # block tweaks
 for i in /sys/block/*/queue ; do

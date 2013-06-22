@@ -68,7 +68,7 @@ fi
 
 # initialize suspend trim helper
 
-if [ -e /data/trimhelper ] ; then
+if [ -s /data/trimhelper ] ; then
   $busybox sed -i "1s/.*/$($busybox date +%s)/" $trimhelper
 else
   $busybox date +%s > $trimhelper
@@ -141,8 +141,8 @@ $busybox chmod 0660 /dev/cpuctl/apps/kswapd/tasks
 $busybox echo 91 > /dev/cpuctl/apps/bg_non_interactive/cpu.shares
 $busybox echo 400000 > /dev/cpuctl/apps/bg_non_interactive/cpu.rt_runtime_us
 $busybox echo 832 > /dev/cpuctl/apps/kswapd/cpu.shares
-$busybox echo 400000 > /dev/cpuctl/apps/kswapd/cpu.rt_runtime_us 
-$busybox echo 1000000 > /dev/cpuctl/apps/kswapd/cpu.rt_period_us
+$busybox echo 1500000 > /dev/cpuctl/apps/kswapd/cpu.rt_period_us
+$busybox echo 562500 > /dev/cpuctl/apps/kswapd/cpu.rt_runtime_us 
 
 $busybox renice -18 $($busybox pgrep com.android.systemui)
 $busybox renice -10 $($busybox pgrep kblockd)
