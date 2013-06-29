@@ -106,7 +106,7 @@ loglevel 3
 
 # Create cgroup mount points for process groups
     mkdir /dev/cpuctl
-    mount cgroup none /dev/cpuctl cpu
+    mount cgroup none /dev/cpuctl cpu,timer_slack
     chown system system /dev/cpuctl
     chown system system /dev/cpuctl/tasks
     chmod 0660 /dev/cpuctl/tasks

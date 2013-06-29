@@ -7,16 +7,12 @@ $busybox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
 $busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
 $busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
 $busybox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
-$busybox echo 4 > /proc/cpu/alignment
+$busybox echo 2 > /proc/cpu/alignment
 $busybox echo 15000000 > /proc/sys/kernel/sched_latency_ns
 $busybox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
 $busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
-$busybox echo 10 > /proc/sys/vm/vfs_cache_pressure
 $busybox echo 92274688 > /proc/sys/vm/dirty_background_bytes
 $busybox echo 104857600 > /proc/sys/vm/dirty_bytes
-
-# gpu tweaks
-$busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
 
 # block tweaks
 for i in /sys/block/*/queue ; do

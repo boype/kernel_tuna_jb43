@@ -140,9 +140,9 @@ $busybox chmod 0660 /dev/cpuctl/apps/kswapd/tasks
 
 $busybox echo 91 > /dev/cpuctl/apps/bg_non_interactive/cpu.shares
 $busybox echo 400000 > /dev/cpuctl/apps/bg_non_interactive/cpu.rt_runtime_us
-$busybox echo 832 > /dev/cpuctl/apps/kswapd/cpu.shares
-$busybox echo 1500000 > /dev/cpuctl/apps/kswapd/cpu.rt_period_us
-$busybox echo 562500 > /dev/cpuctl/apps/kswapd/cpu.rt_runtime_us 
+$busybox echo 832 > /dev/cpuctl/apps/kswapd/cpu.shares 
+$busybox echo 1000000 > /dev/cpuctl/apps/kswapd/cpu.rt_period_us
+$busybox echo 400000 > /dev/cpuctl/apps/kswapd/cpu.rt_runtime_us
 
 $busybox renice -18 $($busybox pgrep com.android.systemui)
 $busybox renice -10 $($busybox pgrep kblockd)
@@ -150,6 +150,9 @@ $busybox renice 10 $($busybox pgrep kswapd)
 
 $busybox echo $($busybox pgrep com.android.systemui) > /dev/cpuctl/tasks
 $busybox echo $($busybox pgrep kswapd) > /dev/cpuctl/apps/kswapd/tasks
+
+# set cgroup_timer_slack for bg_non_interactive tasks
+$busybox echo 100000000 > /dev/cpuctl/apps/bg_non_interactive/timer_slack.min_slack_ns
 
 # wifi module
 $busybox insmod /sbin/bcmdhd.ko firmware_path=/system/vendor/firmware/fw_bcmdhd.bin nvram_path=/system/etc/wifi/bcmdhd.cal
@@ -163,7 +166,7 @@ if [ $swapsize -eq 0 ] ; then
 fi
 
 # low memory killer whitelist for common launchers
-list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam com.chrislacy.actionlauncher.pro com.android.lmt com.tsf.shell"
+list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam com.chrislacy.actionlauncher.pro com.android.lmt com.tsf.shell com.miui.mihome2"
 
 for class in $list ; do
   if [ $($busybox pgrep $class) ] ; then
