@@ -13,18 +13,17 @@ $busybox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
 $busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
 $busybox echo 92274688 > /proc/sys/vm/dirty_background_bytes
 $busybox echo 104857600 > /proc/sys/vm/dirty_bytes
+$busybox echo 0 > /proc/sys/vm/swappiness
 
 # block tweaks
 for i in /sys/block/*/queue ; do
   $busybox echo 0 > $i/iostats
-  $busybox echo 512 > $i/nr_requests
-  $busybox echo 256 > $i/read_ahead_kb
+  $busybox echo 160 > $i/read_ahead_kb
   $busybox echo 0 > $i/rotational
 done
 
 $busybox echo 0 > /sys/block/mmcblk0/queue/add_random
 $busybox echo 128 > /sys/block/mmcblk0/queue/max_sectors_kb
+$busybox echo 512 > /sys/block/mmcblk0/queue/nr_requests
+$busybox echo 256 > /sys/block/mmcblk0/queue/read_ahead_kb
 $busybox echo 2 > /sys/block/mmcblk0/queue/rq_affinity
-
-# LMK
-$busybox echo 8084,10114,12144,15692,17722,22264 > /sys/module/lowmemorykiller/parameters/minfree
