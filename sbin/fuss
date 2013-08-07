@@ -5,7 +5,7 @@
 # update server for boot.img and update.txt
 update_server="http://boypetersen.de"
 # path for update.txt at server
-update_path="fancykernel"
+update_path="fancykernel43"
 # temp directory
 fuss_dir="/sdcard/fuss"
 update_file_net="$update_server/$update_path/update.txt"

@@ -6,6 +6,7 @@ busybox=/sbin/busybox
 $busybox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
 $busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
 $busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+$busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
 $busybox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
 $busybox echo 2 > /proc/cpu/alignment
 $busybox echo 15000000 > /proc/sys/kernel/sched_latency_ns
@@ -14,6 +15,7 @@ $busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
 $busybox echo 92274688 > /proc/sys/vm/dirty_background_bytes
 $busybox echo 104857600 > /proc/sys/vm/dirty_bytes
 $busybox echo 0 > /proc/sys/vm/swappiness
+$busybox echo 0 > /sys/class/backlight/s6e8aa0/acl_set
 
 # block tweaks
 for i in /sys/block/*/queue ; do

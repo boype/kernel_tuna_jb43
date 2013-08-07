@@ -5,6 +5,11 @@ fstrim=/sbin/fstrim
 zipalign=/sbin/zipalign
 trimhelper=/data/trimhelper
 
+# initialize supersu daemon if present
+if [ -e /system/xbin/daemonsu ] ; then
+  /system/xbin/daemonsu --auto-daemon &
+fi
+
 # powerHAL fix
 if [ ! -e /system/lib/hw/power.tuna.so.bak ] ; then
   $busybox mount -o remount,rw /system
@@ -43,36 +48,6 @@ fi
 
 if [ ! -e /system/bin/sysinit ] ; then
   $busybox run-parts /system/etc/init.d
-fi
-
-# workaround buggy busybox rmmod (required for wlan suspend drop workaround)
-KERNEL_VERSION=$($busybox uname -r)
-if [ ! -e /system/lib/modules/$KERNEL_VERSION ] ; then
-  $busybox mount -o remount,rw /system
-  if [ ! -e /system/lib/modules ] ; then
-    $busybox mkdir /system/lib/modules
-  fi
-  $busybox rmdir `$busybox find /system/lib/modules -name '*fancy*'`
-  $busybox mkdir /system/lib/modules/$KERNEL_VERSION
-  $busybox chown -R root.root /system/lib/modules/$KERNEL_VERSION
-  $busybox chmod -R 644 /system/lib/modules/$KERNEL_VERSION
-  $busybox mount -o remount,ro /system
-fi
-
-# symlink for WiFi drop workaround
-if [ ! -e /system/bin/fixwifi ] ; then
-  $busybox mount -o remount,rw /system
-  $busybox ln -s /sbin/wifi_drop_wa /system/bin/fixwifi
-  $busybox mount -o remount,ro /system
-fi
-
-# initialize suspend trim helper
-
-if [ -s /data/trimhelper ] ; then
-  $busybox sed -i "1s/.*/$($busybox date +%s)/" $trimhelper
-else
-  $busybox date +%s > $trimhelper
-  $busybox echo 0 >> $trimhelper
 fi
 
 # zipalign apks
@@ -133,6 +108,7 @@ fi
 until [ $($busybox pgrep com.android.systemui) ] ; do
   $busybox sleep 1
 done
+$busybox sleep 5
 
 $busybox mkdir /dev/cpuctl/kswapd
 $busybox chown system system /dev/cpuctl/kswapd/tasks
@@ -151,15 +127,9 @@ $busybox echo $($busybox pgrep kswapd) > /dev/cpuctl/kswapd/tasks
 # set cgroup_timer_slack for bg_non_interactive tasks
 $busybox echo 100000000 > /dev/cpuctl/apps/bg_non_interactive/timer_slack.min_slack_ns
 
-# LMK
-$busybox echo 8084,10114,12144,15692,17722,22264 > /sys/module/lowmemorykiller/parameters/minfree
-
-# wifi module
-$busybox insmod /sbin/bcmdhd.ko firmware_path=/system/vendor/firmware/fw_bcmdhd.bin nvram_path=/system/etc/wifi/bcmdhd.cal
-
 # low memory killer whitelist for common launchers
 $busybox sleep 20
-list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam com.chrislacy.actionlauncher.pro com.android.lmt com.tsf.shell com.miui.mihome2 com.qihoo360.launcher"
+list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam com.chrislacy.actionlauncher.pro com.android.lmt com.tsf.shell com.miui.mihome2 com.qihoo360.launcher com.gtp.nextlauncher"
 
 for class in $list ; do
   if [ $($busybox pgrep $class) ] ; then
