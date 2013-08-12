@@ -5,11 +5,6 @@ fstrim=/sbin/fstrim
 zipalign=/sbin/zipalign
 trimhelper=/data/trimhelper
 
-# initialize supersu daemon if present
-if [ -e /system/xbin/daemonsu ] ; then
-  /system/xbin/daemonsu --auto-daemon &
-fi
-
 # powerHAL fix
 if [ ! -e /system/lib/hw/power.tuna.so.bak ] ; then
   $busybox mount -o remount,rw /system
@@ -127,17 +122,26 @@ $busybox echo $($busybox pgrep kswapd) > /dev/cpuctl/kswapd/tasks
 # set cgroup_timer_slack for bg_non_interactive tasks
 $busybox echo 100000000 > /dev/cpuctl/apps/bg_non_interactive/timer_slack.min_slack_ns
 
-# low memory killer whitelist for common launchers
+# disable swappiness if zram is not active
 $busybox sleep 20
-list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam com.chrislacy.actionlauncher.pro com.android.lmt com.tsf.shell com.miui.mihome2 com.qihoo360.launcher com.gtp.nextlauncher"
+swapsize=$($busybox free | $busybox grep -i swap | $busybox awk '{print $2}')
 
-for class in $list ; do
-  if [ $($busybox pgrep $class) ] ; then
-    pid=$($busybox pgrep $class)
-    until [ -e /proc/$pid ] ; do
-      $busybox sleep 1
-    done
-    $busybox echo -17 > /proc/$pid/oom_adj
-    break
-  fi
-done
+if [ $swapsize -eq 0 ] ; then
+  $busybox echo 0 > /proc/sys/vm/swappiness
+fi
+
+# low memory killer whitelist for common launchers
+list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfreak.launcher com.anddoes.launcher com.gau.go.launcherex com.mobint.hololauncher com.mobint.hololauncher.hd com.teslacoilsw.launcher org.zeam com.chrislacy.actionlauncher.pro com.android.lmt com.tsf.shell com.miui.mihome2 com.qihoo360.launcher com.gtp.nextlauncher net.alamoapps.launcher"
+
+if [ ! -e /data/nowhitelist ] ; then
+  for class in $list ; do
+    if [ $($busybox pgrep $class) ] ; then
+      pid=$($busybox pgrep $class)
+      until [ -e /proc/$pid ] ; do
+        $busybox sleep 1
+      done
+      $busybox echo -17 > /proc/$pid/oom_adj
+      break
+    fi
+  done
+fi

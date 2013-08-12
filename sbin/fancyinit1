@@ -14,7 +14,6 @@ $busybox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
 $busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
 $busybox echo 92274688 > /proc/sys/vm/dirty_background_bytes
 $busybox echo 104857600 > /proc/sys/vm/dirty_bytes
-$busybox echo 0 > /proc/sys/vm/swappiness
 $busybox echo 0 > /sys/class/backlight/s6e8aa0/acl_set
 
 # block tweaks

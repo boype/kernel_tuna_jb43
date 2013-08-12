@@ -1,10 +1,5 @@
 # CyanogenMod Extras
-
-# su daemon
-# import /init.superuser.rc
-service su_daemon /system/xbin/su --daemon
-    class main
-    oneshot
+import /init.superuser.rc
 
 on init
     export ANDROID_CACHE /cache
