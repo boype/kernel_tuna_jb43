@@ -1,30 +1,30 @@
 #!/system/bin/sh
 
-busybox=/sbin/busybox
+bbox=/sbin/binaries/busybox
 
 # cpu, sched and cache tweaks
-$busybox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
-$busybox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
-$busybox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-$busybox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
-$busybox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
-$busybox echo 2 > /proc/cpu/alignment
-$busybox echo 15000000 > /proc/sys/kernel/sched_latency_ns
-$busybox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
-$busybox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
-$busybox echo 92274688 > /proc/sys/vm/dirty_background_bytes
-$busybox echo 104857600 > /proc/sys/vm/dirty_bytes
-$busybox echo 0 > /sys/class/backlight/s6e8aa0/acl_set
+$bbox echo 384000 > /sys/devices/system/cpu/cpu0/cpufreq/screen_on_min_freq
+$bbox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
+$bbox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+$bbox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
+$bbox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
+$bbox echo 2 > /proc/cpu/alignment
+$bbox echo 15000000 > /proc/sys/kernel/sched_latency_ns
+$bbox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
+$bbox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
+$bbox echo 92274688 > /proc/sys/vm/dirty_background_bytes
+$bbox echo 104857600 > /proc/sys/vm/dirty_bytes
+$bbox echo 0 > /sys/class/backlight/s6e8aa0/acl_set
 
 # block tweaks
 for i in /sys/block/*/queue ; do
-  $busybox echo 0 > $i/iostats
-  $busybox echo 160 > $i/read_ahead_kb
-  $busybox echo 0 > $i/rotational
+  $bbox echo 0 > $i/iostats
+  $bbox echo 160 > $i/read_ahead_kb
+  $bbox echo 0 > $i/rotational
 done
 
-$busybox echo 0 > /sys/block/mmcblk0/queue/add_random
-$busybox echo 128 > /sys/block/mmcblk0/queue/max_sectors_kb
-$busybox echo 512 > /sys/block/mmcblk0/queue/nr_requests
-$busybox echo 256 > /sys/block/mmcblk0/queue/read_ahead_kb
-$busybox echo 2 > /sys/block/mmcblk0/queue/rq_affinity
+$bbox echo 0 > /sys/block/mmcblk0/queue/add_random
+$bbox echo 128 > /sys/block/mmcblk0/queue/max_sectors_kb
+$bbox echo 512 > /sys/block/mmcblk0/queue/nr_requests
+$bbox echo 256 > /sys/block/mmcblk0/queue/read_ahead_kb
+$bbox echo 2 > /sys/block/mmcblk0/queue/rq_affinity

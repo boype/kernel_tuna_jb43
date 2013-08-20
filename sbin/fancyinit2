@@ -1,133 +1,81 @@
 #!/system/bin/sh
 
-busybox=/sbin/busybox
-fstrim=/sbin/fstrim
-zipalign=/sbin/zipalign
-trimhelper=/data/trimhelper
+bbox=/sbin/binaries/busybox
+t2fs=/sbin/binaries/tune2fs
+
+# set writeback journalling mode
+if [ ! -e /data/writebackenabled ] ; then
+  $t2fs -o journal_data_writeback /dev/block/platform/omap/omap_hsmmc.0/by-name/userdata
+  $bbox touch /data/writebackenabled
+  needreboot=1
+fi
+if [ ! -e /cache/writebackenabled ] ; then
+  $t2fs -o journal_data_writeback /dev/block/platform/omap/omap_hsmmc.0/by-name/cache
+  $bbox touch /cache/writebackenabled
+  needreboot=1
+fi
+if [ ! -e /system/writebackenabled ] ; then
+  $t2fs -o journal_data_writeback /dev/block/platform/omap/omap_hsmmc.0/by-name/system
+  $bbox mount -o remount,rw /system
+  $bbox touch /system/writebackenabled
+  needreboot=1
+fi
 
 # powerHAL fix
 if [ ! -e /system/lib/hw/power.tuna.so.bak ] ; then
-  $busybox mount -o remount,rw /system
-  $busybox mv /system/lib/hw/power.tuna.so /system/lib/hw/power.tuna.so.bak
-  $busybox cp /sbin/power.tuna.so /system/lib/hw/
-  $busybox chmod 644 /system/lib/hw/power.tuna.so
-  $busybox mount -o remount,ro /system
+  $bbox mount -o remount,rw /system
+  $bbox mv /system/lib/hw/power.tuna.so /system/lib/hw/power.tuna.so.bak
+  $bbox cp /sbin/power.tuna.so /system/lib/hw/
+  $bbox chmod 644 /system/lib/hw/power.tuna.so
+  needreboot=1
 fi
 
-# FUSS
-if [ ! -e /data/fuss ] ; then
-  $busybox mkdir /data/fuss
-  $busybox chown -R root.root /data/fuss
-  $busybox chmod -R 755 /data/fuss
-  $busybox cp /sbin/fuss /data/fuss/
-  $busybox cp /sbin/reflash /data/fuss/
-  $busybox chmod 755 /data/fuss/fuss
-  $busybox chmod 755 /data/fuss/reflash
-fi
-
-if [ ! -e /system/bin/fuss ] ; then
-  $busybox mount -o remount,rw /system
-  $busybox ln -s /data/fuss/fuss /system/bin/fuss
-  $busybox ln -s /data/fuss/reflash /system/bin/reflash
-  $busybox mount -o remount,ro /system
+if [ $needreboot -eq 1 ] ; then 
+  $bbox reboot
 fi
 
 # init.d support
 if [ ! -e /system/etc/init.d ] ; then
-  $busybox mount -o remount,rw /system
-  $busybox mkdir /system/etc/init.d
-  $busybox chown -R root.root /system/etc/init.d
-  $busybox chmod -R 755 /system/etc/init.d
-  $busybox mount -o remount,ro /system
+  $bbox mount -o remount,rw /system
+  $bbox mkdir /system/etc/init.d
+  $bbox chown -R root.root /system/etc/init.d
+  $bbox chmod -R 755 /system/etc/init.d
+  $bbox mount -o remount,ro /system
 fi
 
 if [ ! -e /system/bin/sysinit ] ; then
-  $busybox run-parts /system/etc/init.d
-fi
-
-# zipalign apks
-LOG_FILE=/data/zipalign.log
-ZIPALIGNDB=/data/zipalign.db
-
-if [ -e $LOG_FILE ] ; then
-  $busybox rm $LOG_FILE
-fi
-
-if [ ! -f $ZIPALIGNDB ] ; then
-  $busybox touch $ZIPALIGNDB
-fi
-
-$busybox echo "Starting FV Automatic ZipAlign $( date +"%m-%d-%Y %H:%M:%S" )" | $busybox tee -a $LOG_FILE
-
-for DIR in /system/app /data/app ; do
-  cd $DIR
-  for APK in *.apk ; do
-    if [ $APK -ot $ZIPALIGNDB ] && [ $($busybox grep "$DIR/$APK" $ZIPALIGNDB|$busybox wc -l) -gt 0 ] ; then
-      $busybox echo "Already checked: $DIR/$APK" | $busybox tee -a $LOG_FILE
-    else
-      $zipalign -c 4 $APK
-      if [ $? -eq 0 ] ; then
-        $busybox echo "Already aligned: $DIR/$APK" | $busybox tee -a $LOG_FILE
-        $busybox grep "$DIR/$APK" $ZIPALIGNDB > /dev/null || $busybox echo $DIR/$APK >> $ZIPALIGNDB
-      else
-        $busybox echo "Now aligning: $DIR/$APK" | $busybox tee -a $LOG_FILE
-        $zipalign -f 4 $APK /cache/$APK
-        $busybox mount -o rw,remount /system
-        $busybox cp -f -p /cache/$APK $APK
-	$busybox chmod 644 $APK
-        $busybox rm -f /cache/$APK
-        $busybox grep "$DIR/$APK" $ZIPALIGNDB > /dev/null || $busybox echo $DIR/$APK >> $ZIPALIGNDB
-      fi
-    fi
-  done
-done
-
-$busybox mount -o ro,remount /system
-$busybox touch $ZIPALIGNDB
-$busybox echo "Automatic ZipAlign finished at $( date +"%m-%d-%Y %H:%M:%S" )" | $busybox tee -a $LOG_FILE
-
-# trim file system if wipes have been performed
-if [ ! -e /cache/trimmed ] ; then
-  $fstrim /cache
-  $busybox touch /cache/trimmed
-fi
-
-if [ ! -e /data/dalvik-cache/trimmed ] ; then
-  $busybox mount -o remount,nodiscard /data
-  $fstrim /data
-  $busybox mount -o remount,discard /data
-  $busybox touch /data/dalvik-cache/trimmed
+  $bbox run-parts /system/etc/init.d
 fi
 
 # change some processes' cgroups and priorities
-until [ $($busybox pgrep com.android.systemui) ] ; do
-  $busybox sleep 1
+until [ $($bbox pgrep com.android.systemui) ] ; do
+  $bbox sleep 1
 done
-$busybox sleep 5
+$bbox sleep 5
 
-$busybox mkdir /dev/cpuctl/kswapd
-$busybox chown system system /dev/cpuctl/kswapd/tasks
-$busybox chmod 0660 /dev/cpuctl/kswapd/tasks
+$bbox mkdir /dev/cpuctl/kswapd
+$bbox chown system system /dev/cpuctl/kswapd/tasks
+$bbox chmod 0660 /dev/cpuctl/kswapd/tasks
 
-$busybox echo 91 > /dev/cpuctl/apps/bg_non_interactive/cpu.shares
-$busybox echo 400000 > /dev/cpuctl/apps/bg_non_interactive/cpu.rt_runtime_us
-$busybox echo 832 > /dev/cpuctl/kswapd/cpu.shares
+$bbox echo 91 > /dev/cpuctl/apps/bg_non_interactive/cpu.shares
+$bbox echo 400000 > /dev/cpuctl/apps/bg_non_interactive/cpu.rt_runtime_us
+$bbox echo 832 > /dev/cpuctl/kswapd/cpu.shares
 
-$busybox renice -18 $($busybox pgrep com.android.systemui)
-$busybox renice 10 $($busybox pgrep kswapd)
+$bbox renice -18 $($bbox pgrep com.android.systemui)
+$bbox renice 10 $($bbox pgrep kswapd)
 
-$busybox echo $($busybox pgrep com.android.systemui) > /dev/cpuctl/tasks
-$busybox echo $($busybox pgrep kswapd) > /dev/cpuctl/kswapd/tasks
+$bbox echo $($bbox pgrep com.android.systemui) > /dev/cpuctl/tasks
+$bbox echo $($bbox pgrep kswapd) > /dev/cpuctl/kswapd/tasks
 
 # set cgroup_timer_slack for bg_non_interactive tasks
-$busybox echo 100000000 > /dev/cpuctl/apps/bg_non_interactive/timer_slack.min_slack_ns
+$bbox echo 100000000 > /dev/cpuctl/apps/bg_non_interactive/timer_slack.min_slack_ns
 
 # disable swappiness if zram is not active
-$busybox sleep 20
-swapsize=$($busybox free | $busybox grep -i swap | $busybox awk '{print $2}')
+$bbox sleep 20
+swapsize=$($bbox free | $bbox grep -i swap | $bbox awk '{print $2}')
 
 if [ $swapsize -eq 0 ] ; then
-  $busybox echo 0 > /proc/sys/vm/swappiness
+  $bbox echo 0 > /proc/sys/vm/swappiness
 fi
 
 # low memory killer whitelist for common launchers
@@ -135,12 +83,12 @@ list="com.cyanogenmod.trebuchet com.android.launcher org.adw.launcher org.adwfre
 
 if [ ! -e /data/nowhitelist ] ; then
   for class in $list ; do
-    if [ $($busybox pgrep $class) ] ; then
-      pid=$($busybox pgrep $class)
+    if [ $($bbox pgrep $class) ] ; then
+      pid=$($bbox pgrep $class)
       until [ -e /proc/$pid ] ; do
-        $busybox sleep 1
+        $bbox sleep 1
       done
-      $busybox echo -17 > /proc/$pid/oom_adj
+      $bbox echo -17 > /proc/$pid/oom_adj
       break
     fi
   done
