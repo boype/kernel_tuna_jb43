@@ -45,7 +45,7 @@ service compcache /system/bin/handle_compcache
     oneshot
 
 # sysinit (/system/etc/init.d)
-service sysinit /system/bin/sysinit
-    user root
-    oneshot
-    disabled
+# service sysinit /system/bin/sysinit
+#   user root
+#   oneshot
+#   disabled
