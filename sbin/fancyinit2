@@ -30,6 +30,16 @@ if [ ! -e /system/lib/hw/power.tuna.so.bak ] ; then
   needreboot=1
 fi
 
+# disable 1080p with HUGEMEM-enabled kernels
+if [[ -e /sys/block/zram0 ]] && [[ ! -e /system/etc/media_profiles.xml.bak ]] ; then
+  $bbox mount -o remount,rw /system
+  $bbox mv /system/etc/media_profiles.xml /system/etc/media_profiles.xml.bak
+  $bbox cp /sbin/media_profiles.xml /system/etc/
+  $bbox chmod 644 /system/etc/media_profiles.xml
+  $bbox chown root:root /system/etc/media_profiles.xml
+  needreboot=1
+fi
+
 if [ $needreboot -eq 1 ] ; then 
   reboot
 fi
@@ -51,19 +61,13 @@ until [ $($bbox pgrep com.android.systemui) ] ; do
 done
 $bbox sleep 5
 
-$bbox mkdir /dev/cpuctl/kswapd
-$bbox chown system system /dev/cpuctl/kswapd/tasks
-$bbox chmod 0660 /dev/cpuctl/kswapd/tasks
-
 $bbox echo 91 > /dev/cpuctl/apps/bg_non_interactive/cpu.shares
 $bbox echo 400000 > /dev/cpuctl/apps/bg_non_interactive/cpu.rt_runtime_us
-$bbox echo 704 > /dev/cpuctl/kswapd/cpu.shares
 
-$bbox renice -5 $($bbox pgrep com.android.systemui)
+$bbox renice -18 $($bbox pgrep com.android.systemui)
 $bbox renice 5 $($bbox pgrep kswapd)
 
 $bbox echo $($bbox pgrep com.android.systemui) > /dev/cpuctl/tasks
-$bbox echo $($bbox pgrep kswapd) > /dev/cpuctl/kswapd/tasks
 
 # set cgroup_timer_slack for bg_non_interactive tasks
 $bbox echo 100000000 > /dev/cpuctl/apps/bg_non_interactive/timer_slack.min_slack_ns

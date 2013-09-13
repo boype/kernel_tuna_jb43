@@ -49,3 +49,10 @@ service compcache /system/bin/handle_compcache
 #   user root
 #   oneshot
 #   disabled
+
+# Block stock OTA activities
+service otablock /system/bin/otablock
+    user root
+    oneshot
+    disabled
+
