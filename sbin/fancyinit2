@@ -3,6 +3,15 @@
 bbox=/sbin/binaries/busybox
 t2fs=/sbin/binaries/tune2fs
 
+# init.d support
+if [ ! -e /system/etc/init.d ] ; then
+  $bbox mount -o remount,rw /system
+  $bbox mkdir /system/etc/init.d
+  $bbox chown -R root.root /system/etc/init.d
+  $bbox chmod -R 755 /system/etc/init.d
+  $bbox mount -o remount,ro /system
+fi
+
 # set writeback journalling mode
 if [ ! -e /data/writebackenabled ] ; then
   $t2fs -o journal_data_writeback /dev/block/platform/omap/omap_hsmmc.0/by-name/userdata
@@ -30,13 +39,17 @@ if [ ! -e /system/lib/hw/power.tuna.so.bak ] ; then
   needreboot=1
 fi
 
-# disable 1080p with HUGEMEM-enabled kernels
-if [[ -e /sys/block/zram0 ]] && [[ ! -e /system/etc/media_profiles.xml.bak ]] ; then
+# disable 1080p with BIGMEM-enabled kernels
+version=$($bbox uname -r | $bbox awk -F- '{print $NF}')
+if [[ $version == big ]] && [[ ! -e /system/etc/media_profiles.xml.bak ]] ; then
   $bbox mount -o remount,rw /system
   $bbox mv /system/etc/media_profiles.xml /system/etc/media_profiles.xml.bak
   $bbox cp /sbin/media_profiles.xml /system/etc/
-  $bbox chmod 644 /system/etc/media_profiles.xml
   $bbox chown root:root /system/etc/media_profiles.xml
+  $bbox chmod 644 /system/etc/media_profiles.xml
+  $bbox cp /sbin/bigmemcheck /system/etc/init.d/62bigmemcheck
+  $bbox chown root:root /system/etc/init.d/62bigmemcheck
+  $bbox chmod 755 /system/etc/init.d/62bigmemcheck
   needreboot=1
 fi
 
@@ -44,15 +57,7 @@ if [ $needreboot -eq 1 ] ; then
   reboot
 fi
 
-# init.d support
-if [ ! -e /system/etc/init.d ] ; then
-  $bbox mount -o remount,rw /system
-  $bbox mkdir /system/etc/init.d
-  $bbox chown -R root.root /system/etc/init.d
-  $bbox chmod -R 755 /system/etc/init.d
-  $bbox mount -o remount,ro /system
-fi
-
+# execute init.d scripts
 $bbox run-parts /system/etc/init.d
 
 # change some processes' cgroups and priorities
