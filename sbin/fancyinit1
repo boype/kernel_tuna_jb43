@@ -8,7 +8,6 @@ $bbox echo 537600 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq
 $bbox echo 1228800 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
 $bbox echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/gpu_oc
 $bbox echo 2 > /sys/devices/system/cpu/sched_mc_power_savings
-$bbox echo 2 > /proc/cpu/alignment
 $bbox echo 15000000 > /proc/sys/kernel/sched_latency_ns
 $bbox echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
 $bbox echo 3000000 > /proc/sys/kernel/sched_wakeup_granularity_ns
